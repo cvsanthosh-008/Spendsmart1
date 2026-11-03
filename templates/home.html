@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expense Tracker Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo-area" style="display: flex; flex-direction: column; gap: 4px;">
+            <span>💸 WealthWise Tracker</span>
+            <span style="font-size: 1.1rem; color: #10b981; letter-spacing: 2px;">💵 $ $ $ 💵</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="active">📊 Dashboard</a></li>
+            <li><a href="/reports">📈 Reports</a></li>
+            <li style="margin-top: 20px;"><a href="/export" style="background-color: #10b981; color: white; text-align: center;">📥 Export CSV</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <div class="top-bar">
+            <div>
+                <h2>Welcome Back, Explorer! 👋</h2>
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 2px; font-style: italic;">"Money doesn't come so easily—treat every rupee as a reward for your time and hard effort!" 💸</p>
+            </div>
+            <span>👤 User Profile</span>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Left Column -->
+            <div>
+                <div class="metrics-grid">
+                    <div class="metric-card green">
+                        <p>💵 Total Expenses</p>
+                        <h3>₹{{ summary.total_expenses }}</h3>
+                    </div>
+                    <div class="metric-card blue">
+                        <p>🧾 Total Transactions</p>
+                        <h3>{{ summary.total_transactions }}</h3>
+                    </div>
+                    <div class="metric-card purple">
+                        <p>📊 Monthly Average</p>
+                        <h3>₹{{ summary.monthly_average }}</h3>
+                    </div>
+                </div>
+
+                <!-- Monthly Budget Progress Card -->
+                <div class="card" style="margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3>🎯 Monthly Budget Target ({{ summary.current_month_key }})</h3>
+                        <form action="/" method="POST" style="display: flex; gap: 5px;">
+                            <input type="hidden" name="month_key" value="{{ summary.current_month_key }}">
+                            <input type="number" name="budget_amount" placeholder="Set Budget" value="{{ summary.monthly_budget }}" style="width: 100px; padding: 5px; font-size: 0.8rem; border:1px solid #cbd5e1; border-radius:4px;">
+                            <button type="submit" style="background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">💾 Save</button>
+                        </form>
+                    </div>
+                    <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 8px;">Spent: <b>₹{{ summary.current_month_spent }}</b> out of <b>₹{{ summary.monthly_budget }}</b></p>
+                    <div style="width: 100%; background: #e2e8f0; border-radius: 8px; height: 12px; overflow: hidden;">
+                        <div style="width: {{ summary.budget_percentage }}%; background: {% if summary.budget_percentage > 90 %}#ef4444{% else %}#10b981{% endif %}; height: 100%; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- Smart Financial Insights Card -->
+                <div class="card" style="margin-bottom: 25px; background: linear-gradient(135deg, #f8fafc, #eff6ff); border-left: 4px solid #3b82f6;">
+                    <h3 style="color: #1e293b; margin-bottom: 10px;">💡 Smart Financial Insights & Tips</h3>
+                    <ul style="list-style-type: none; padding-left: 0; display: flex; flex-direction: column; gap: 8px;">
+                        {% for tip in summary.insights %}
+                        <li style="font-size: 0.9rem; color: #334155; display: flex; align-items: center; gap: 8px;">
+                            <span>{{ tip | safe }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Charts Section -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                    <div class="card" style="margin-bottom: 0;">
+                        <h3>🍩 Spending by Category</h3>
+                        <div style="max-height: 220px; display: flex; justify-content: center; align-items: center; margin-top: 15px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom: 0;">
+                        <h3>📈 Monthly Spending Trends</h3>
+                        <div style="max-height: 220px; margin-top: 15px;">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Expenses Table -->
+                <div class="card">
+                    <h3>📑 Recent Transactions</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>📅 Date</th>
+                                <th>🏷️ Category</th>
+                                <th>💬 Description</th>
+                                <th>💰 Amount (₹)</th>
+                                <th>⚡ Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exp in expenses %}
+                            <tr>
+                                <td>{{ exp.date }}</td>
+                                <td>{{ exp.category }} {% if exp.is_recurring %}<span title="Recurring Bill" style="font-size:0.75rem; background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:10px;">🔁 Bill</span>{% endif %}</td>
+                                <td>{{ exp.description }}</td>
+                                <td>{{ exp.amount }}</td>
+                                <td>
+                                    <a href="/edit/{{ exp.id }}" class="btn-edit">✏️ Edit</a>
+                                    <form action="/delete/{{ exp.id }}" method="POST" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger">🗑️ Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" style="text-align:center; color:#64748b;">📭 No expenses recorded matching filters yet. Time to log one!</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Column: Filters & Add Expense Form -->
+            <div>
+                <!-- Filter Expenses Card -->
+                <div class="card">
+                    <h3>🔍 Filter & Search</h3>
+                    <form action="/" method="GET" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label>Keyword Search</label>
+                            <input type="text" name="search" placeholder="Search description..." value="{{ selected_search }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" name="start_date" value="{{ selected_start }}">
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" name="end_date" value="{{ selected_end }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="All Categories" {% if selected_category == 'All Categories' %}selected{% endif %}>🌍 All Categories</option>
+                                <option value="Food" {% if selected_category == 'Food' %}selected{% endif %}>🍔 Food</option>
+                                <option value="Travel" {% if selected_category == 'Travel' %}selected{% endif %}>✈️ Travel</option>
+                                <option value="Shopping" {% if selected_category == 'Shopping' %}selected{% endif %}>🛍️ Shopping</option>
+                                <option value="Education" {% if selected_category == 'Education' %}selected{% endif %}>📚 Education</option>
+                                <option value="Health" {% if selected_category == 'Health' %}selected{% endif %}>💊 Health</option>
+                                <option value="Others" {% if selected_category == 'Others' %}selected{% endif %}>📦 Others</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn" style="background-color: #2563eb;">🔍 Apply Filters</button>
+                    </form>
+                </div>
+
+                <!-- Add Expense Form Card -->
+                <div class="card">
+                    <h3>➕ Add New Expense</h3>
+                    
+                    <!-- Quick Pre-set Buttons -->
+                    <div style="margin-top: 10px; margin-bottom: 15px;">
+                        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 6px;">⚡ Quick Pre-sets:</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            <button type="button" onclick="setPreset('Food', 50, '☕ Coffee / Tea')" style="padding:4px 8px; font-size:0.75rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">☕ Coffee ₹50</button>
+                            <button type="button" onclick="setPreset('Food', 150, '🍱 Lunch')" style="padding:4px 8px; font-size:0.75rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">🍱 Lunch ₹150</button>
+                            <button type="button" onclick="setPreset('Travel', 100, '🚕 Cab / Bus fare')" style="padding:4px 8px; font-size:0.75rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">🚕 Travel ₹100</button>
+                            <button type="button" onclick="setPreset('Shopping', 500, '🛒 Daily Groceries')" style="padding:4px 8px; font-size:0.75rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">🛒 Groceries ₹500</button>
+                        </div>
+                    </div>
+
+                    <form action="/" method="POST">
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="exp_date" name="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="exp_category" name="category" required>
+                                <option value="">Select Category</option>
+                                <option value="Food">🍔 Food</option>
+                                <option value="Travel">✈️ Travel</option>
+                                <option value="Shopping">🛍️ Shopping</option>
+                                <option value="Education">📚 Education</option>
+                                <option value="Health">💊 Health</option>
+                                <option value="Others">📦 Others</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount (₹)</label>
+                            <input type="number" step="0.01" id="exp_amount" name="amount" placeholder="Enter amount" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="exp_desc" name="description" placeholder="Enter description" rows="2"></textarea>
+                        </div>
+                        
+                        <!-- Recurring Expense Toggle -->
+                        <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                            <input type="checkbox" id="is_recurring" name="is_recurring" value="1" style="width: auto; cursor: pointer;">
+                            <label for="is_recurring" style="margin-bottom: 0; cursor: pointer; font-size: 0.85rem; color: #475569;">🔁 Mark as Recurring Monthly Bill</label>
+                        </div>
+
+                        <button type="submit" class="btn">🚀 + Add Expense</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript & Chart.js -->
+    <script>
+        // Set today's date automatically on load
+        document.getElementById('exp_date').valueAsDate = new Date();
+
+        // Preset button loader function
+        function setPreset(category, amount, description) {
+            document.getElementById('exp_category').value = category;
+            document.getElementById('exp_amount').value = amount;
+            document.getElementById('exp_desc').value = description;
+            if(!document.getElementById('exp_date').value) {
+                document.getElementById('exp_date').valueAsDate = new Date();
+            }
+        }
+
+        const categoryData = {{ summary.category_data | map(attribute='category') | list | tojson }};
+        const categoryTotals = {{ summary.category_data | map(attribute='total') | list | tojson }};
+
+        const monthlyLabels = {{ summary.monthly_totals.keys() | list | tojson }};
+        const monthlyValues = {{ summary.monthly_totals.values() | list | tojson }};
+
+        const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+        new Chart(ctxCategory, {
+            type: 'doughnut',
+            data: {
+                labels: categoryData,
+                datasets: [{
+                    data: categoryTotals,
+                    backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#64748b']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                }
+            }
+        });
+
+        const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
+        new Chart(ctxMonthly, {
+            type: 'bar',
+            data: {
+                labels: monthlyLabels.length > 0 ? monthlyLabels : ['No Data'],
+                datasets: [{
+                    label: 'Spending (₹)',
+                    data: monthlyValues.length > 0 ? monthlyValues : [0],
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
