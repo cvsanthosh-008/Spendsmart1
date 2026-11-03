@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Expense</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+</head>
+<body style="justify-content: center; align-items: center; display: flex;">
+    <div class="card" style="width: 400px;">
+        <h3>✏️ Edit Expense</h3>
+        <form action="/edit/{{ expense.id }}" method="POST" style="margin-top: 15px;">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="date" value="{{ expense.date }}" required>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category" required>
+                    <option value="Food" {% if expense.category == 'Food' %}selected{% endif %}>Food</option>
+                    <option value="Travel" {% if expense.category == 'Travel' %}selected{% endif %}>Travel</option>
+                    <option value="Shopping" {% if expense.category == 'Shopping' %}selected{% endif %}>Shopping</option>
+                    <option value="Education" {% if expense.category == 'Education' %}selected{% endif %}>Education</option>
+                    <option value="Health" {% if expense.category == 'Health' %}selected{% endif %}>Health</option>
+                    <option value="Others" {% if expense.category == 'Others' %}selected{% endif %}>Others</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount (₹)</label>
+                <input type="number" step="0.01" name="amount" value="{{ expense.amount }}" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="3">{{ expense.description }}</textarea>
+            </div>
+            <button type="submit" class="btn" style="background-color: #3b82f6;">Update Expense</button>
+            <a href="/" style="display:block; text-align:center; margin-top:10px; color:#64748b; text-decoration:none;">Cancel</a>
+        </form>
+    </div>
+</body>
+</html>
