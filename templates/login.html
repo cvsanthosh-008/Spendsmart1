@@ -1,28 +1,31 @@
 <!DOCTYPE html>
-
 <html>
 <head>
     <title>SpendSmart Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
 </head>
 <body>
     <h1>SpendSmart</h1>
     <h2>Login</h2>
 
-```
-<form method="POST" action="/login">
-    <label>Email:</label>
-    <input type="email" name="email" required>
-    <br><br>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
 
-    <label>Password:</label>
-    <input type="password" name="password" required>
-    <br><br>
+    <form method="POST" action="/login">
+        <label>Email</label>
+        <input type="email" name="email" required>
 
-    <button type="submit">Login</button>
-</form>
+        <label>Password</label>
+        <input type="password" name="password" required>
 
-<p>New user? <a href="/register">Register here</a></p>
-```
+        <button type="submit">Login</button>
+    </form>
 
+    <p>Don't have an account?
+        <a href="/register">Register here</a>
+    </p>
 </body>
 </html>
